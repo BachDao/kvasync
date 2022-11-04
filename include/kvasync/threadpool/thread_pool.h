@@ -4,6 +4,7 @@
 #include <atomic>
 #include <thread>
 #include <vector>
+#include <condition_variable>
 namespace kvasync {
 namespace impl {
 
