@@ -1,8 +1,8 @@
-#ifndef KVASYNC_JOB_H
-#define KVASYNC_JOB_H
+#ifndef KV_ASYNC_JOB_H
+#define KV_ASYNC_JOB_H
 #include <functional>
-namespace kvasync {
-namespace impl {
+namespace kv_async {
+namespace detail {
 class job {
   std::function<void()> fn_;
 
@@ -11,6 +11,11 @@ public:
     requires std::is_invocable_v<Fn>
   explicit job(Fn &&fn);
   job() = default;
+  job(const job &) = default;
+  job(job &&) = default;
+  job& operator=(const job& rhs);
+  job& operator=(job&& rhs);
+
   void operator()();
   explicit operator bool();
 };
@@ -18,6 +23,6 @@ template <typename Fn>
   requires std::is_invocable_v<Fn>
 job::job(Fn &&fn) : fn_(std::forward<Fn>(fn)) {}
 } // namespace impl
-} // namespace kvasync
+} // namespace kv_async
 
-#endif // KVASYNC_JOB_H
+#endif // KV_ASYNC_JOB_H

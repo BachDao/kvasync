@@ -1,51 +1,44 @@
-#include "kvasync/threadpool/thread_pool.h"
+//
+// Created by Bach Dao.
+//
+
+#include "kv_async/threadpool/thread_pool.h"
 #include <iostream>
-using namespace std::chrono_literals;
-namespace kvasync {
-namespace impl {
-thread_pool::thread_pool(size_t numOfWorkers) : numberOfWorker_(numOfWorkers) {
-  init_workers(numOfWorkers);
-  waiting_for_workers_ready();
-}
-void thread_pool::init_workers(size_t numOfWorker) {
-  while (numOfWorker--) {
-    workers_.emplace_back(*this);
+#include <string>
+namespace kv_async {
+
+thread_pool::thread_pool(size_t workerCount)
+    : globalJobQueue_(workerCount), workers_(), workerCount_(workerCount) {
+  workers_.reserve(workerCount);
+  std::atomic_thread_fence(std::memory_order_seq_cst);
+  for (int i = 0; i < workerCount; ++i) {
+    workers_.emplace_back(
+        std::make_unique<detail::worker>(globalJobQueue_, *this));
   }
+}
+void thread_pool::drain_work_queue_on_exit(bool flag) {
+  drainQueueOnExit_ = flag;
 }
 
-void thread_pool::worker_notify_ready() {
-  auto newCounterVal = readyCounter_.fetch_add(1);
-  if (newCounterVal == numberOfWorker_ - 1) {
-    start_all_worker();
+thread_pool::~thread_pool() {
+  for (auto &w : workers_) {
+    w->stop(drainQueueOnExit_);
   }
+  waiting_for_worker_exit();
+  return;
 }
-void thread_pool::waiting_for_workers_ready() {
+void thread_pool::waiting_for_worker_exit() {
   std::unique_lock lck{mutex_};
-  cv_.wait(lck, [this] { return readyFlag_; });
+  cv_.wait(lck, [&] { return workerDoneCounter_.load() == workerCount_; });
 }
-void thread_pool::start_all_worker() {
+void thread_pool::worker_report_done() {
+  int prevCount = 0;
   {
     std::lock_guard lck{mutex_};
-    readyFlag_ = true;
+    prevCount = workerDoneCounter_.fetch_add(1);
   }
-  cv_.notify_all();
-}
-void thread_pool::worker_wait() {
-  std::unique_lock lck{mutex_};
-  cv_.wait(lck, [this] { return readyFlag_; });
-}
-bool thread_pool::is_worker_thread() { return impl::workerState.valid(); }
-thread_pool::~thread_pool() {
-  std::cout << "thread pool dtor" << std::endl;
-  stopRequest_.test_and_set();
-  for (auto &v : workers_) {
-    if (v.worker_.joinable()) {
-      v.worker_.join();
-    }
+  if (prevCount == workerCount_ - 1) {
+    cv_.notify_one();
   }
 }
-job thread_pool::get_job() {
-  return jobQueue_.pop();
-}
-} // namespace impl
-} // namespace kvasync
+} // namespace kv_async
