@@ -1,4 +1,0 @@
-//
-// Created by Bach Dao.
-//
-

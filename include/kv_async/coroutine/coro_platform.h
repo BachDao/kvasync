@@ -5,7 +5,6 @@
 #ifndef KV_ASYNC_CORO_PLATFORM_H
 #define KV_ASYNC_CORO_PLATFORM_H
 #include "kv_async/platform_definitions.h"
-namespace kv_async {
 
 #ifdef KV_CLANG_MACOS
 #include <experimental/coroutine>
@@ -15,7 +14,11 @@ namespace kv_coro = std::experimental;
 namespace coroutine = std;
 #elif defined(KV_CLANG)
 #include <coroutine>
-namespace coroutine = std;
+namespace __coroutine = std;
 #endif
+namespace kv_async {
+namespace detail {
+namespace coroutine = __coroutine;
+}
 } // namespace kv_async
 #endif // KV_ASYNC_CORO_PLATFORM_H

@@ -8,7 +8,7 @@ namespace kv_async {
 namespace detail {
 
 void worker::do_work() {
-  job curJob;
+  work curJob;
   while (true) {
     auto stopRequested = stopRequested_.load(std::memory_order_relaxed);
     if (stopRequested) {
@@ -25,7 +25,7 @@ void worker::do_work() {
   }
   threadPool_.worker_report_done();
 }
-void worker::drain_private_queue(job &curJob) {
+void worker::drain_private_queue(work &curJob) {
   while (privateQueue_.size() > 0) {
     curJob = std::move(privateQueue_.front());
     privateQueue_.pop();
@@ -33,7 +33,7 @@ void worker::drain_private_queue(job &curJob) {
       curJob();
   }
 }
-bool worker::steal_job_from_global_queue(job &curJob) {
+bool worker::steal_job_from_global_queue(work &curJob) {
   auto idx = lastDequeueIdx_;
   auto retryCount = 0;
   while (true) {

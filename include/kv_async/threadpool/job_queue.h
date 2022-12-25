@@ -4,7 +4,7 @@
 
 #ifndef KV_ASYNC_JOB_QUEUE_H
 #define KV_ASYNC_JOB_QUEUE_H
-#include "kv_async/threadpool/job.h"
+#include "kv_async/threadpool/work.h"
 #include <deque>
 #include <mutex>
 #include <thread>
@@ -12,17 +12,22 @@
 namespace kv_async {
 namespace detail {
 class local_job_queue {
-  std::deque<job> jobQueue_;
+  std::deque<work> jobQueue_;
   std::mutex mutex_;
 
 public:
   explicit local_job_queue(size_t defaultSize);
   template <typename Fn> void enqueue(Fn &&fn);
-  bool dequeue(job &outVal);
+  bool dequeue(work &outVal);
 };
 template <typename Fn> void local_job_queue::enqueue(Fn &&fn) {
   std::lock_guard lck{mutex_};
+  if constexpr (std::is_same_v<std::remove_cvref_t<Fn>, work>) {
+    jobQueue_.push_back(std::forward<Fn>(fn));
+    return;
+  }
   jobQueue_.emplace_back(std::forward<Fn>(fn));
+  return;
 }
 class job_queue {
   std::vector<std::unique_ptr<local_job_queue>> jobQueues_;

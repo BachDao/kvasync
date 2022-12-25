@@ -19,7 +19,7 @@ local_job_queue &job_queue::at(size_t idx) {
 }
 size_t job_queue::size() const { return sizeMask_ + 1; }
 
-bool local_job_queue::dequeue(job &outVal) {
+bool local_job_queue::dequeue(work &outVal) {
   std::lock_guard lck{mutex_};
   if (jobQueue_.size() == 0)
     return false;

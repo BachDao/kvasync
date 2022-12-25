@@ -12,10 +12,10 @@ namespace kv_async {
 namespace detail {
 class worker {
   friend class ::kv_async::thread_pool;
-  std::queue<job> privateQueue_;
-  std::queue<job> publicQueue_;
+  std::queue<work> privateQueue_;
+  std::queue<work> publicQueue_;
   job_queue &globalJobQueue_;
-  thread_pool& threadPool_;
+  thread_pool &threadPool_;
   std::thread workerThread_;
   size_t lastDequeueIdx_ = 0;
 
@@ -29,21 +29,27 @@ class worker {
   template <typename Fn>
     requires std::is_invocable_v<Fn>
   void private_enqueue(Fn &&fn);
-  void drain_private_queue(job &curJob);
-  bool steal_job_from_global_queue(job &curJob);
+  void drain_private_queue(work &curJob);
+  bool steal_job_from_global_queue(work &curJob);
 
-  // depend on value of "pending", worker will try to drain job queue
+  // depend on value of "pending", worker will try to drain work queue
   // before quit
   void stop(bool pending);
 
 public:
-  explicit worker(job_queue &globalJobQueue, thread_pool& tp);
+  explicit worker(job_queue &globalJobQueue, thread_pool &tp);
   ~worker();
   void wake_up();
 };
 template <typename Fn>
   requires std::is_invocable_v<Fn>
-void worker::private_enqueue(Fn &&fn) {}
+void worker::private_enqueue(Fn &&fn) {
+  if constexpr (std::is_same_v<std::remove_cvref_t<Fn>, work>) {
+    privateQueue_.push(std::forward<Fn>(fn));
+    return;
+  }
+  privateQueue_.emplace(std::forward<Fn>(fn));
+}
 } // namespace detail
 } // namespace kv_async
 #endif // KV_ASYNC_WORKER_H
