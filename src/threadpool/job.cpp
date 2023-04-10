@@ -1,12 +1,20 @@
-#include "kvasync/threadpool/job.h"
+#include "kv_async/threadpool/work.h"
 #include <cassert>
-namespace kvasync {
-namespace impl {
+namespace kv_async {
+namespace detail {
 
-void job::operator()() {
+void work::operator()() {
   assert(fn_);
   fn_();
 }
-job::operator bool() { return bool(fn_); }
-} // namespace impl
-} // namespace kvasync
+work::operator bool() { return bool(fn_); }
+work &work::operator=(const work &rhs) {
+  fn_ = rhs.fn_;
+  return *this;
+}
+work &work::operator=(work &&rhs) {
+  fn_ = std::move(rhs.fn_);
+  return *this;
+}
+} // namespace detail
+} // namespace kv_async

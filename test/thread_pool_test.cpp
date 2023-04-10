@@ -1,14 +1,19 @@
+//
+// Created by Bach Dao.
+//
+#include "kv_async/threadpool/thread_pool.h"
 #include <gtest/gtest.h>
-#include "kvasync/threadpool/thread_pool.h"
-using namespace kvasync;
-using namespace std::chrono_literals;
-TEST(TestSuite, TestName){
-  impl::thread_pool tp;
-  int counter = 1;
-  tp.submit([&]{
-    std::cout << "hello world" << std::endl;
-    counter++;
-  });
-  std::this_thread::sleep_for(100ms);
-  EXPECT_EQ(counter, 2);
+#include <iostream>
+using namespace kv_async;
+TEST(ThreadPool, submitJob) {
+  int outVal = 1;
+  {
+    thread_pool tp(4);
+    tp.drain_work_queue_on_exit(true);
+    tp.submit([&] {
+      outVal = 2;
+      std::cout << "done" << std::endl;
+    });
+  }
+  EXPECT_EQ(outVal, 2);
 }
